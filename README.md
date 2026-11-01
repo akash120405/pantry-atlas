@@ -14,8 +14,12 @@ GEMINI_API_KEY and GROQ_API_KEY are server-only secrets. Gemini is tried first; 
 
 ## First-version limits
 
-Twelve authored starter recipes, one per cuisine, rather than an exhaustive database. Ingredient matching checks names, not quantities, freshness or product safety. Listed-allergen exclusions cannot certify allergen safety. Tutorial links open clearly labelled YouTube searches, rather than individually verified videos. Dish artwork is illustrative. The interface is English; language selection changes tutorial searches only. Pantry and favourites are stored in this browser without account syncing. Image recognition remains explicitly unavailable until a server credential is configured and verified. Request limiting is per Worker instance; use durable limits before public launch.
+Twelve authored starter recipes, one per cuisine, rather than an exhaustive database. Ingredient matching checks names, not quantities, freshness or product safety. Listed-allergen exclusions cannot certify allergen safety. Tutorial links open clearly labelled YouTube searches, rather than individually verified videos. Dish photos are sourced from Wikimedia Commons with per-image author and license credits. Photos are serving suggestions and may include different garnishes. The interface is English; language selection changes tutorial searches only. Pantry and favourites are stored in this browser without account syncing. Image recognition remains explicitly unavailable until a server credential is configured and verified. Request limiting is per Worker instance; use durable limits before public launch.
 
 ## Source
 
-Edit the HTML, CSS, client, recipes, logic and server files in worker/. scripts/build.mjs embeds them in worker/index.js and produces dist/server/index.js. Sites identity remains in .openai/hosting.json. Initial publication is private. Reuse the API boundary when adding a mobile client later, with suitable authentication.
+Edit the HTML, CSS, effects, motion, client, photos, recipes, logic and server files in worker/. scripts/build.mjs embeds them in worker/index.js and produces dist/server/index.js. Sites identity remains in .openai/hosting.json. The site can be published publicly through Sites access settings. Reuse the API boundary when adding a mobile client later, with suitable authentication.
+
+## Visual experience
+
+The interface includes a CSS 3D food scene, floating layers, perspective card tilt, scroll entrances, photo zoom, animated dialogs and an Effects toggle. System reduced-motion preferences are respected by default. Dish photos load lazily from Wikimedia; credits are available in recipe dialogs and How it works. The interface is responsive for phones and desktops.
