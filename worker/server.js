@@ -23,12 +23,11 @@ export async function identifyIngredients(image,env,send=fetch){
  for(const call of providers){try{return {ingredients:await call()};}catch{/* Try the next configured provider without disclosing its response or credentials. */}}
  throw Error('Photo recognition is temporarily unavailable. Please try again shortly or add ingredients by name.');
 }
-export default {async fetch(request,env={}){
+const app={async fetch(request,env={}){
  const url=new URL(request.url);
  if(url.pathname==='/api/status')return json({visionReady:Boolean(env.GEMINI_API_KEY||env.GROQ_API_KEY)});
  if(url.pathname==='/api/analyze'){
   if(request.method!=='POST')return json({error:'Use POST for image recognition.'},405);
-  if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)return json({error:'Request origin is not allowed.'},403);
   if(!env.GEMINI_API_KEY&&!env.GROQ_API_KEY)return json({error:'Photo recognition is awaiting a secure AI connection. Add ingredients manually for now.'},503);
   const user=request.headers.get('oai-authenticated-user-id')||request.headers.get('CF-Connecting-IP')||'local';
   const now=Date.now(),recent=(rateLimits.get(user)||[]).filter(t=>now-t<60000);if(recent.length>=6)return json({error:'Please wait a minute before trying another photo.'},429);recent.push(now);rateLimits.set(user,recent);if(rateLimits.size>1000)for(const [key,times]of rateLimits)if(now-times[times.length-1]>60000)rateLimits.delete(key);
@@ -45,4 +44,23 @@ export default {async fetch(request,env={}){
  const name=url.pathname==='/'?'ui.html':url.pathname.slice(1);const value=assets[name];if(!value)return new Response('Page not found',{status:404});
  const type=name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
  return new Response(request.method==='HEAD'?null:value,{headers:{'Content-Type':type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://thumb.wikimedia.org https://upload.wikimedia.org; connect-src 'self'; base-uri 'none'; form-action 'self'"}});
+}};
+// GitHub Pages hosts only browser assets. Allow its exact origin to use the
+// existing server API, including error responses and JSON-upload preflights.
+export default {async fetch(request,env={},ctx){
+ const url=new URL(request.url);
+ if(!url.pathname.startsWith('/api/'))return app.fetch(request,env,ctx);
+ const origin=request.headers.get('Origin');
+ const allowed=!origin||origin===url.origin||origin==='https://akash120405.github.io';
+ if(!allowed)return json({error:'Request origin is not allowed.'},403);
+ const cors=new Headers({'Vary':'Origin'});
+ if(origin){cors.set('Access-Control-Allow-Origin',origin);cors.set('Access-Control-Allow-Methods','GET, POST, OPTIONS');cors.set('Access-Control-Allow-Headers','Content-Type');cors.set('Access-Control-Max-Age','600');}
+ if(request.method==='OPTIONS'){
+  const method=request.headers.get('Access-Control-Request-Method');
+  const requestedHeaders=(request.headers.get('Access-Control-Request-Headers')||'').toLowerCase().split(',').map(h=>h.trim()).filter(Boolean);
+  if(!['/api/status','/api/analyze'].includes(url.pathname)||!['GET','POST'].includes(method)||requestedHeaders.some(h=>h!=='content-type'))return new Response(null,{status:403});
+  return new Response(null,{status:204,headers:cors});
+ }
+ const response=await app.fetch(request,env,ctx);const headers=new Headers(response.headers);for(const [name,value]of cors)headers.set(name,value);
+ return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }};

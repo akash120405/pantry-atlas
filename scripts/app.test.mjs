@@ -4,6 +4,7 @@ import {recipes} from '../worker/recipes.js';
 import {normalize,hasIngredient,rankRecipes} from '../worker/logic.js';
 import worker from '../worker/index.js';
 import {identifyIngredients} from '../worker/server.js';
+import {readFile,access} from 'node:fs/promises';
 test('regional ingredient names normalize consistently',()=>{assert.equal(normalize('  Brinjal  '),'eggplant');assert.equal(normalize('courgette'),'zucchini');assert.equal(normalize('Chickpeas'),'chickpea');assert.equal(normalize('capsicum'),'bell pepper');});
 test('complete sample pantry ranks shakshuka first',()=>{const pantry=['egg','tomato','bell pepper','onion','garlic','olive oil','cumin','paprika','salt'];const ranked=rankRecipes(recipes,pantry);assert.equal(ranked[0].id,'shakshuka');assert.equal(ranked[0].match,100);assert.equal(ranked[0].missing.length,0);assert.equal(rankRecipes(recipes,pantry,{ready:true})[0].id,'shakshuka');});
 test('staples are not silently assumed and oil substitutions are directional',()=>{assert.equal(rankRecipes(recipes,[])[0].matched,0);assert.equal(hasIngredient(['olive oil'],'oil'),true);assert.equal(hasIngredient(['oil'],'olive oil'),false);});
@@ -16,3 +17,18 @@ test('photo-detected varieties match recipe ingredient names',()=>{assert.equal(
 test('Gemini results normalize and deduplicate without calling the fallback',async()=>{let calls=0;const result=await identifyIngredients(fixture,{GEMINI_API_KEY:'gemini-test',GROQ_API_KEY:'groq-test'},async(url,options)=>{calls++;assert.ok(url.startsWith('https://generativelanguage.googleapis.com/'));assert.equal(options.headers['x-goog-api-key'],'gemini-test');return Response.json({candidates:[{content:{parts:[{text:'{"ingredients":[" Tomato ","tomato","Basil"]}' }]}}]});});assert.deepEqual(result,{ingredients:['tomato','basil']});assert.equal(calls,1);});
 test('Groq handles primary failures and malformed primary output',async()=>{for(const first of [()=>new Response('',{status:429}),()=>Response.json({candidates:[{content:{parts:[{text:'not JSON'}]}}]})]){let calls=0;const result=await identifyIngredients(fixture,{GEMINI_API_KEY:'gemini-test',GROQ_API_KEY:'groq-test'},async(url)=>{calls++;return calls===1?first():Response.json({choices:[{message:{content:'{"ingredients":["carrot"]}'}}]});});assert.deepEqual(result,{ingredients:['carrot']});assert.equal(calls,2);}});
 test('empty detection is valid and total failure reveals no provider details',async()=>{const empty=await identifyIngredients(fixture,{GROQ_API_KEY:'test'},async()=>Response.json({choices:[{message:{content:'{"ingredients":[]}'}}]}));assert.deepEqual(empty,{ingredients:[]});await assert.rejects(identifyIngredients(fixture,{GROQ_API_KEY:'secret-test'},async()=>{throw Error('secret-test');}),error=>!error.message.includes('secret-test')&&error.message.includes('temporarily unavailable'));});
+test('GitHub Pages preflights and API errors allow only the exact trusted origin',async()=>{
+ const origin='https://akash120405.github.io';
+ const preflight=await worker.fetch(new Request('https://test.invalid/api/analyze',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}}));
+ assert.equal(preflight.status,204);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),origin);
+ const error=await worker.fetch(new Request('https://test.invalid/api/analyze',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'}),{GROQ_API_KEY:'test-only'});
+ assert.equal(error.status,400);assert.equal(error.headers.get('Access-Control-Allow-Origin'),origin);
+ const blocked=await worker.fetch(new Request('https://test.invalid/api/status',{headers:{Origin:origin+'.evil.invalid'}}));
+ assert.equal(blocked.status,403);assert.equal(blocked.headers.get('Access-Control-Allow-Origin'),null);
+});
+test('GitHub Pages assets use repository-relative paths and contain no server code',async()=>{
+ const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');const client=await readFile(new URL('../docs/client.js',import.meta.url),'utf8');const config=await readFile(new URL('../docs/config.js',import.meta.url),'utf8');
+ assert.ok(!/(?:href|src)="\/(?!\/)/.test(html));assert.ok(!/from '\//.test(client));assert.ok(config.includes('https://pantry-atlas-kitchen.nickersssz.chatgpt.site'));
+ for(const file of ['style.css','effects.css','client.js','recipes.js','logic.js','photos.js','motion.js','config.js','.nojekyll'])await access(new URL('../docs/'+file,import.meta.url));
+ assert.ok(!client.includes('GROQ_API_KEY')&&!client.includes('GEMINI_API_KEY'));
+});

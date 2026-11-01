@@ -23,3 +23,9 @@ Edit the HTML, CSS, effects, motion, client, photos, recipes, logic and server f
 ## Visual experience
 
 The interface includes a CSS 3D food scene, floating layers, perspective card tilt, scroll entrances, photo zoom, animated dialogs and an Effects toggle. System reduced-motion preferences are respected by default. Dish photos load lazily from Wikimedia; credits are available in recipe dialogs and How it works. The interface is responsive for phones and desktops.
+
+## GitHub Pages
+
+Run npm run build:pages to regenerate docs/. Commit docs/ with source changes. In the repository Settings > Pages, select Deploy from a branch, main, and /docs, then Save. GitHub publishes https://akash120405.github.io/pantry-atlas/ automatically after docs changes.
+
+GitHub Pages serves the browser interface. Image recognition remains on the existing public Sites backend; docs/config.js names that origin without any keys. The backend accepts API requests from the exact https://akash120405.github.io origin and its own origin. No server files or credentials are included in the static export.

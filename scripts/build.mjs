@@ -1,5 +1,5 @@
 import {readFile,writeFile,mkdir,copyFile} from 'node:fs/promises';
-const files={};for(const name of ['ui.html','style.css','client.js','recipes.js','logic.js','photos.js','motion.js','effects.css'])files[name]=await readFile(new URL('../worker/'+name,import.meta.url),'utf8');
+const files={};for(const name of ['ui.html','style.css','client.js','recipes.js','logic.js','photos.js','motion.js','effects.css','config.js'])files[name]=await readFile(new URL('../worker/'+name,import.meta.url),'utf8');
 const server=await readFile(new URL('../worker/server.js',import.meta.url),'utf8');
 await writeFile(new URL('../worker/index.js',import.meta.url),'const assets = '+JSON.stringify(files)+';\n'+server);
 await mkdir(new URL('../dist/server/',import.meta.url),{recursive:true});await mkdir(new URL('../dist/.openai/',import.meta.url),{recursive:true});
