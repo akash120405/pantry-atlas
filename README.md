@@ -10,7 +10,7 @@ Requires Node.js 20+. Run npm run build, then npm run dev. Open http://127.0.0.1
 
 ## Configuration
 
-OPENAI_API_KEY is a server-only secret. OPENAI_VISION_MODEL optionally changes the default gpt-4.1-mini vision model. Configure hosted secrets through Sites; local secrets do not automatically deploy. The app sends photo requests to OpenAI with store: false and does not persist uploaded photos. The status endpoint reveals only whether a key is configured.
+GEMINI_API_KEY and GROQ_API_KEY are server-only secrets. Gemini is tried first; Groq handles a failure or invalid response. Either provider can also be configured alone. GEMINI_VISION_MODEL defaults to gemini-3.8-flash; GROQ_VISION_MODEL defaults to qwen/qwen3.8-27b. Configure hosted secrets through Sites; local secrets do not automatically deploy. Photos are sent to Google Gemini and, if needed, Groq for recognition. This app does not persist uploaded photos; provider data policies apply. The status endpoint reveals only whether a provider is configured, never credentials. Keep .env.local ignored, and never place a key in source or client code.
 
 ## First-version limits
 
